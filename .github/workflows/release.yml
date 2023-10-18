@@ -65,8 +65,9 @@ jobs:
               tag_name: '${{ needs.deploy.outputs.new_release_tag }}',
               previous_tag_name: '${{ needs.deploy.outputs.last_release_tag }}'
             })
-            console.log('response of /generate-notes endpoint  '${response}' ')
-            return response.body
+            console.log("response from generate-notes=")
+            console.log(response)
+            return response
 
       - name: Create new ${{ needs.deploy.outputs.new_release_tag }} release
         uses: actions/github-script@v6
