@@ -1,0 +1,77 @@
+---
+name: Release Version
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - 'main'
+
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy release
+    if: startsWith(github.head_ref, 'release/')
+    outputs:
+      last_release_tag: ${{ steps.last-release.outputs.tag-name }}
+      new_release_tag: ${{ steps.bump-semver.outputs.new_version }}
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Configure git
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+
+      - name: get previous released annotated tag
+        id: last-release
+        run: |
+          echo "tag-name=$(git describe | awk -F '-' '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - uses: actions-ecosystem/action-bump-semver@v1
+        id: bump-semver
+        with:
+          current_version: ${{ steps.last-release.outputs.tag-name }}
+          level: minor
+        
+
+
+  release:
+    runs-on: ubuntu-latest
+    name: Release
+    if: startsWith(github.head_ref, 'release/')
+    needs: deploy
+    steps:
+      - name: Create release notes for ${{ needs.deploy.outputs.project_version }} release
+        uses: actions/github-script@v6
+        id: release-notes
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const repo_name = context.payload.repository.full_name
+            const response = await github.request('POST /repos/' + repo_name + '/releases' + '/generate-notes', {
+              tag_name: '${{ needs.deploy.outputs.new_release_tag }}',
+              previous_tag_name: '${{ needs.deploy.outputs.last_release_tag }}'
+            })
+            console.log('response of /generate-notes endpoint ' ${response}')
+            return response.body
+
+      - name: Create new ${{ needs.deploy.outputs.new_release_tag }} release
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const repo_name = context.payload.repository.full_name
+            const response = await github.request('POST /repos/' + repo_name + '/releases', {
+              tag_name: '${{ needs.deploy.outputs.new_release_tag }}',
+              name: '${{ needs.deploy.outputs.new_release_tag }}',
+              body: '${{ steps.release-notes.outputs.result }}',
+              draft: false,
+              prerelease: false,
+              make_latest: 'true'
+            })
