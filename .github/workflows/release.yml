@@ -65,7 +65,7 @@ jobs:
               tag_name: '${{ needs.deploy.outputs.new_release_tag }}',
               previous_tag_name: '${{ needs.deploy.outputs.last_release_tag }}'
             })
-            console.log('response of /generate-notes endpoint ' ${response}')
+            console.log('response of /generate-notes endpoint  ${response}')
             return response.body
 
       - name: Create new ${{ needs.deploy.outputs.new_release_tag }} release
