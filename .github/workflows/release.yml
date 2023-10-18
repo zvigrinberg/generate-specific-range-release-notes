@@ -76,7 +76,7 @@ jobs:
             const response = await github.request('POST /repos/' + repo_name + '/releases', {
               tag_name: '${{ needs.deploy.outputs.new_release_tag }}',
               name: '${{ needs.deploy.outputs.new_release_tag }}',
-              body: '${{ steps.release-notes.outputs.result }}',
+              body: ${{ steps.release-notes.outputs.result }},
               draft: false,
               prerelease: false,
               make_latest: 'true'
